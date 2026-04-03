@@ -1,56 +1,103 @@
 #include "MeshLoader.h"
 #include <fstream>
 #include <iostream>
-#include <string> // Added for skipping labels
+#include <string> 
 
-Mesh* MeshLoader::Load(const char* path)
+
+namespace MeshLoader
 {
-    std::ifstream inFile(path);
-    if (!inFile.good())
-    {
-        std::cerr << "Failed to load mesh: " << path << std::endl;
-        return nullptr;
-    }
+	void LoadVertices(ifstream& inFile, Mesh& mesh);
+	void LoadColours(ifstream& inFile, Mesh& mesh);
+	void LoadIndices(ifstream& inFile, Mesh& mesh);
+	//void LoadTexCoords(ifstream& inFile, TexturedMesh& mesh);
 
-    Mesh* mesh = new Mesh();
+	void LoadVertices(ifstream& inFile, Mesh& mesh)
+	{
+		inFile >> mesh.VertexCount;
+		if (mesh.VertexCount > 0)
+		{
+			mesh.Vertices = new Vertex[mesh.VertexCount];
+			for (int i = 0; i < mesh.VertexCount; i++)
+			{
+				inFile >> mesh.Vertices[i].x;
+				inFile >> mesh.Vertices[i].y;
+				inFile >> mesh.Vertices[i].z;
+			}
+		}
+	}
 
-    // 1. Vertices
-    inFile >> mesh->VertexCount;
-    mesh->Vertices = new Vertex[mesh->VertexCount];
-    for (int i = 0; i < mesh->VertexCount; i++) {
-        inFile >> mesh->Vertices[i].x >> mesh->Vertices[i].y >> mesh->Vertices[i].z;
-    }
+	void LoadColours(ifstream& inFile, Mesh& mesh)
+	{
+		inFile >> mesh.ColorCount;
+		if (mesh.ColorCount > 0)
+		{
+			mesh.Colors = new Color[mesh.ColorCount];
+		}
 
-    // 2. Texture Coordinates
-    inFile >> mesh->TexCoordCount;
-    mesh->TexCoords = new TexCoord[mesh->TexCoordCount];
-    for (int i = 0; i < mesh->TexCoordCount; i++) {
-        inFile >> mesh->TexCoords[i].u >> mesh->TexCoords[i].v;
-    }
 
-    // 3. Colors
-    inFile >> mesh->ColorCount;
-    mesh->Colors = new Color[mesh->ColorCount];
-    for (int i = 0; i < mesh->ColorCount; i++) {
-        inFile >> mesh->Colors[i].r >> mesh->Colors[i].g >> mesh->Colors[i].b;
-    }
+		for (int i = 0; i < mesh.ColorCount; i++)
+		{
+			inFile >> mesh.Colors[i].r;
+			inFile >> mesh.Colors[i].g;
+			inFile >> mesh.Colors[i].b;
+		}
+	}
 
-    // 4. Indices
-    inFile >> mesh->IndexCount;
-    mesh->Indices = new GLushort[mesh->IndexCount];
-    for (int i = 0; i < mesh->IndexCount; i++) {
-        unsigned int temp;
-        inFile >> temp;
-        mesh->Indices[i] = static_cast<GLushort>(temp);   // NO -1
-    }
+	void LoadTexCoords(ifstream& inFile, Mesh& mesh)
+	{
+		inFile >> mesh.TexCoordCount;
+		if (mesh.TexCoordCount > 0)
+		{
+			mesh.TexCoords = new TexCoord[mesh.TexCoordCount];
+		}
 
-    inFile.close();
+		for (int i = 0; i < mesh.TexCoordCount; i++)
+		{
+			inFile >> mesh.TexCoords[i].u;
+			inFile >> mesh.TexCoords[i].v;
+		}
+	}
 
-    std::cout << "Loaded " << path
-        << " ? V:" << mesh->VertexCount
-        << " T:" << mesh->TexCoordCount
-        << " C:" << mesh->ColorCount
-        << " I:" << mesh->IndexCount << std::endl;
 
-    return mesh;
+	void LoadIndices(ifstream& inFile, Mesh& mesh)
+	{
+		inFile >> mesh.IndexCount;
+		mesh.Indices = new GLushort[mesh.IndexCount];
+		for (int i = 0; i < mesh.IndexCount; i++)
+		{
+			inFile >> mesh.Indices[i];
+		}
+	}
+
+	Mesh* MeshLoader::Load(char* path)
+	{
+		Mesh* mesh = new Mesh();
+
+		ifstream inFile;
+
+		inFile.open(path);
+
+		if (!inFile.good())
+		{
+			cerr << "Can't open texture file" << path << endl;
+			return nullptr;
+		}
+
+		LoadVertices(inFile, *mesh);
+		LoadTexCoords(inFile, *mesh);
+		LoadColours(inFile, *mesh);
+		LoadIndices(inFile, *mesh);
+
+		return mesh;
+	}
+
+	//TexturedMesh* MeshLoader::LoadTextured(char* path)
+	//{
+	//	TexturedMesh* mesh = new TexturedMesh()
+	//	mesh->Mesh = new Mesh();
+
+	//	//LOAD FILE AND DATA
+
+	//	return mesh;
+	//}
 }

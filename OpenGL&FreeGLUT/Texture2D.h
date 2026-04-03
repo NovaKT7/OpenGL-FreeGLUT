@@ -1,7 +1,5 @@
 #pragma once
-#include <Windows.h>
-#include <gl/GL.h>
-#include <gl/GLU.h>
+#include "Structures.h"
 #include "GL\freeglut.h"
 class Texture2D
 {

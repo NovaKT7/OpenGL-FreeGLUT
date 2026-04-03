@@ -5,6 +5,8 @@
 #include "GL\freeglut.h"
 #include "Structures.h"
 #include "SceneObject.h"
+#include <fstream>
+#include <iostream>
 class Cube : public SceneObject
 {
 private:
@@ -17,6 +19,7 @@ private:
 	Vector3 _position;
 	float _rotationSpeed;
 	float _movementSpeed;
+
 public:
 	Cube(Mesh* mesh, Texture2D* texture, float x, float y, float z, float rotationSpeed, float movementSpeed);
 	~Cube();

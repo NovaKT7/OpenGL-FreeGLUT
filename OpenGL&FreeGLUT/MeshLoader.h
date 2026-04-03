@@ -1,9 +1,10 @@
 #pragma once
+
 #include "Structures.h"
+using namespace std;
+
 namespace MeshLoader
 {
-    
-    Mesh* Load(const char* path);
-    TexturedMesh* LoadTextured(const char* path);
-
-}
+	Mesh* Load(char* path);
+	//TexturedMesh* LoadTextured(char* path);
+};

@@ -43,6 +43,8 @@ class HelloGL
 
 private:
 	float rotation;
+	static Vertex vertices[];
+	static Color colors[];
 };
 
 

@@ -9,41 +9,43 @@
 
 HelloGL::HelloGL(int argc, char* argv[])
 {
+    // 1. CLEAR THE ARRAY IMMEDIATELY
+    for (int i = 0; i < NUM_OBJ; i++) {
+        objects[i] = nullptr;
+    }
+
     // Seed the random number generator
     srand(static_cast<unsigned int>(std::time(0)));
-    InitObjects();
     InitGL(argc, argv);
+    InitObjects();
     GLUTCallbacks::Init(this);
     glutMainLoop();
 }
 
 void HelloGL::InitGL(int argc, char* argv[])
 {
-   ;
-    // Initialize GLUT
+    GLUTCallbacks::Init(this);
+
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH);
+    glutInitDisplayMode(GLUT_DOUBLE);
     glutInitWindowSize(800, 800);
     glutInitWindowPosition(100, 100);
     glutCreateWindow("Simple OpenGL Program");
-
-    // Register display callback
     glutDisplayFunc(GLUTCallbacks::Display);
-
-    // Register timer callback
     glutTimerFunc(REFRESHRATE, GLUTCallbacks::Timer, REFRESHRATE);
-
     glutKeyboardFunc(GLUTCallbacks::Keyboard);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glViewport(0, 0, 800, 800);
-    gluPerspective(45.0f, 1.0f, 1.0f, 1000.0f);
+    gluPerspective(45, 1, 1, 1000);
     glMatrixMode(GL_MODELVIEW);
+    glEnable(GL_DEPTH_TEST);
 
     glEnable(GL_TEXTURE_2D);
-    glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
+
+    glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 }
 
@@ -51,28 +53,31 @@ void HelloGL::InitGL(int argc, char* argv[])
 
 void HelloGL::InitObjects()
 {
-    Mesh* cubeMesh = MeshLoader::Load("cubeTexandCol.txt");
+    
+   
+    
    
 
-    Texture2D* texture = new Texture2D();
-    bool success = texture->Load("Penguins.raw", 256, 256); 
-    if (!success) {
-        std::cout << "ERROR: Failed to load Penguins.raw!\n";
-    }
-    else {
-        std::cout << "Texture loaded OK\n";
-    }
-
-    if (!cubeMesh) {
-        std::cerr << "ERROR: cubeTexandCol.txt failed to load!\n";
-    }
-
-    Mesh* pyramidMesh = MeshLoader::Load("pyramid.txt");
 
     camera = new Camera();
     camera->eye = { 0.0f, 0.0f, 15.0f };
     camera->center = { 0.0f, 0.0f, 0.0f };
     camera->up = { 0.0f, 1.0f, 0.0f };
+
+    Mesh* cubeMesh = MeshLoader::Load((char*)"cubeTexandCol.txt");
+ 
+
+    Texture2D* texture = new Texture2D();
+    texture->Load((char*)"Penguins.raw", 512, 512);
+    Mesh* pyramidMesh = MeshLoader::Load((char*)"pyramid.txt");
+    if (!pyramidMesh) {
+        std::cerr << "Failed to load pyramid.txt mesh!" << std::endl;
+    }
+    else {
+        std::cout << "Successfully loaded pyramid.txt mesh." << std::endl;
+    }
+  
+
 
     // Create only 20 Cubes for testing
     for (int i = 0; i < 20; i++)
@@ -82,9 +87,12 @@ void HelloGL::InitObjects()
         float z = -(20.0f + (rand() % 100) / 5.0f);
 
         objects[i] = new Cube(cubeMesh, texture, x, y, z, 2.0f, 0.0f);
+
+
+     
     }
 
-    // Create 20 Pyramids
+    /* Create 20 Pyramids*/
     for (int i = 20; i < 40; i++)
     {
         float x = ((rand() % 400) / 10.0f) - 20.0f;
@@ -102,19 +110,21 @@ void HelloGL::InitObjects()
   
 void HelloGL::Display()
 {
-    glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
+
     gluLookAt(camera->eye.x, camera->eye.y, camera->eye.z,
         camera->center.x, camera->center.y, camera->center.z,
         camera->up.x, camera->up.y, camera->up.z);
-    
 
+    glEnable(GL_TEXTURE_2D);     // Start with texture enabled
 
     for (int i = 0; i < NUM_OBJ; i++)
     {
         if (objects[i])
             objects[i]->Draw();
     }
+
     glutSwapBuffers();
 }
 
@@ -204,3 +214,4 @@ HelloGL::~HelloGL(void)
     }
     
 }
+

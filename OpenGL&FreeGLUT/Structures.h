@@ -1,6 +1,8 @@
 #pragma once
 #include <Windows.h>
-#include <gl/GL.h>
+#include <gl/gl.h>
+#include <gl/GLU.h>
+#include "Texture2D.h"
 
 struct Vector3
 {
@@ -32,38 +34,13 @@ struct TexCoord
     GLfloat v;
 };
 
-// FIXED Mesh struct
 struct Mesh
 {
     Vertex* Vertices;
     Color* Colors;
     GLushort* Indices;
-    TexCoord* TexCoords;           // ? This line was causing problems
-
-    int VertexCount;
-    int ColorCount;
-    int IndexCount;
-    int TexCoordCount;
-
-    Mesh()
-        : Vertices(nullptr),
-        Colors(nullptr),
-        Indices(nullptr),
-        TexCoords(nullptr),
-        VertexCount(0),
-        ColorCount(0),
-        IndexCount(0),
-        TexCoordCount(0)
-    {}
-};
-
-struct TexturedMesh
-{
-    Mesh* Mesh;
     TexCoord* TexCoords;
-    int TexCoordCount;
 
-    TexturedMesh()
-        : Mesh(nullptr), TexCoords(nullptr), TexCoordCount(0)
-    {}
+    int VertexCount, ColorCount, IndexCount, TexCoordCount;
 };
+

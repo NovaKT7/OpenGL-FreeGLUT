@@ -68,7 +68,7 @@ void HelloGL::InitObjects()
  
 
     Texture2D* texture = new Texture2D();
-    texture->Load((char*)"Penguins.raw", 512, 512);
+    texture->Load((char*)"Diamonds.raw", 960, 960);
     Mesh* pyramidMesh = MeshLoader::Load((char*)"pyramid.txt");
     if (!pyramidMesh) {
         std::cerr << "Failed to load pyramid.txt mesh!" << std::endl;

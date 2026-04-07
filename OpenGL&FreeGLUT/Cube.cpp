@@ -39,29 +39,44 @@ void Cube::Update()
 }
 void Cube::Draw()
 {
-	if (_mesh->Vertices != nullptr && _mesh->Colors != nullptr && _mesh->TexCoords != nullptr && _mesh->Indices != nullptr)
-	{
-		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, _texture->GetID());
+    if (_mesh == nullptr || _mesh->Vertices == nullptr) return;
 
-		glPushMatrix();
-		glTranslatef(_position.x, _position.y, _position.z);
-		glRotatef(_rotation, 1.0f, 1.0f, 0.0f);
-		glRotatef(_rotation, 0.0f, 1.0f, 1.0f);
-		glRotatef(_rotation, 1.0f, 0.0f, 1.0f);
+    glPushMatrix();
+    glTranslatef(_position.x, _position.y, _position.z);
+    glRotatef(_rotation, 1.0f, 1.0f, 1.0f);
 
-		glBegin(GL_TRIANGLES);
-		for (int i = 0; i < _mesh->IndexCount; i++)
-		{
-			GLushort idx = _mesh->Indices[i];
-			glTexCoord2f(_mesh->TexCoords[idx].u, _mesh->TexCoords[idx].v);
-			glColor3f(_mesh->Colors[idx].r, _mesh->Colors[idx].g, _mesh->Colors[idx].b);
-			glVertex3f(_mesh->Vertices[idx].x, _mesh->Vertices[idx].y, _mesh->Vertices[idx].z);
-		}
-		glEnd();
-		glPopMatrix();
-		glDisable(GL_TEXTURE_2D);
-	}
+    if (_texture != nullptr)
+    {
+        glBindTexture(GL_TEXTURE_2D, _texture->GetID());
+        glEnable(GL_TEXTURE_2D);
+    }
+
+    // Enable the arrays
+    glEnableClientState(GL_NORMAL_ARRAY);
+    glEnableClientState(GL_VERTEX_ARRAY);
+   
+    if (_mesh->TexCoordCount > 0)
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    // Set the pointers
+    glVertexPointer(3, GL_FLOAT, 0, _mesh->Vertices);
+    glNormalPointer(GL_FLOAT, 0, _mesh->Normals);
+    if (_mesh->TexCoordCount > 0)
+        glTexCoordPointer(2, GL_FLOAT, 0, _mesh->TexCoords);
+
+    // Draw using indices
+    glDrawElements(GL_TRIANGLES, _mesh->IndexCount, GL_UNSIGNED_SHORT, _mesh->Indices);
+
+    // Disable the arrays
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    if (_mesh->TexCoordCount > 0)
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    if (_texture != nullptr)
+        glDisable(GL_TEXTURE_2D);
+
+    glPopMatrix();
 }
 Cube::~Cube()
 {

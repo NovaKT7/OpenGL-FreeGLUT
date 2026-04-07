@@ -44,6 +44,7 @@ void HelloGL::InitGL(int argc, char* argv[])
 
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
+    glEnableClientState(GL_NORMAL_ARRAY);
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -64,7 +65,7 @@ void HelloGL::InitObjects()
     camera->center = { 0.0f, 0.0f, 0.0f };
     camera->up = { 0.0f, 1.0f, 0.0f };
 
-    Mesh* cubeMesh = MeshLoader::Load((char*)"cubeTexandCol.txt");
+    Mesh* cubeMesh = MeshLoader::Load((char*)"cube2.txt");
  
 
     Texture2D* texture = new Texture2D();
@@ -177,14 +178,17 @@ void HelloGL::MoveCamera(char key)
         camera->center.y -= moveSpeed; // Move the center point along with the camera
         break;
         case 'z':
-			camera->eye.x += moveSpeed;
-            camera->center.y += moveSpeed; // Move the center point along with the camera
+            camera->eye.x += moveSpeed;
+            camera->eye.z += moveSpeed;
+            camera->center.z -= moveSpeed;// Move the center point along with the camera
+            camera->center.x -= moveSpeed; // Move the center point along with the camera
 
 			break;
             case 'x':
                 camera->eye.x -= moveSpeed;
-                camera->center.y -= moveSpeed; // Move the center point along with the camera
-
+                camera->eye.z -= moveSpeed;
+                camera->center.z += moveSpeed;// Move the center point along with the camera
+                camera->center.x += moveSpeed;
                 break;
     default:
         break;

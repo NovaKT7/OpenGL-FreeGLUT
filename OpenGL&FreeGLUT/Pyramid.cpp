@@ -30,16 +30,16 @@ void Pyramid::Draw()
 
     glPushMatrix();
         glTranslatef(_position.x, _position.y, _position.z);
-        glDisable(GL_TEXTURE_2D); 
+       
 
         glBegin(GL_TRIANGLES);
         for (int i = 0; i < _mesh->IndexCount; i++)
         {
             GLushort idx = _mesh->Indices[i];
             
-            // Draw color if index is valid
-            if (idx < _mesh->ColorCount)
-                glColor3f(_mesh->Colors[idx].r, _mesh->Colors[idx].g, _mesh->Colors[idx].b);
+            //// Draw color if index is valid
+            //if (idx < _mesh->ColorCount)
+            //    glColor3f(_mesh->Colors[idx].r, _mesh->Colors[idx].g, _mesh->Colors[idx].b);
 
             // Draw vertex
             if (idx < _mesh->VertexCount)

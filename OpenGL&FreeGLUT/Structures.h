@@ -67,3 +67,15 @@ Vector4 Diffuse;
 Vector4 Specular;
 GLfloat Shininess;
 };
+
+struct Ray
+{
+	Vector3 Origin;
+	Vector3 Direction;
+};
+
+struct AABB
+    {
+	Vector3 Min;
+	Vector3 Max;
+};

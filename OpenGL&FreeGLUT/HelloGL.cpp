@@ -7,6 +7,7 @@
 
 
 
+
 HelloGL::HelloGL(int argc, char* argv[])
 {
     // 1. CLEAR THE ARRAY IMMEDIATELY
@@ -23,6 +24,71 @@ HelloGL::HelloGL(int argc, char* argv[])
     glutMainLoop();
 }
 
+static bool RayIntersectsAABB(const Vector3& ro, const Vector3& rd, const AABB& box, float& tHit)
+{
+    float tmin = -1e30f;
+    float tmax = 1e30f;
+
+    auto slab = [&](float roC, float rdC, float minC, float maxC) -> bool
+        {
+            if (fabs(rdC) < 1e-8f)
+                return (roC >= minC && roC <= maxC);
+
+            float invD = 1.0f / rdC;
+            float t1 = (minC - roC) * invD;
+            float t2 = (maxC - roC) * invD;
+            if (t1 > t2) std::swap(t1, t2);
+
+            if (t1 > tmin) tmin = t1;
+            if (t2 < tmax) tmax = t2;
+
+            return (tmin <= tmax);
+        };
+
+    if (!slab(ro.x, rd.x, box.min.x, box.max.x)) return false;
+    if (!slab(ro.y, rd.y, box.min.y, box.max.y)) return false;
+    if (!slab(ro.z, rd.z, box.min.z, box.max.z)) return false;
+
+    if (tmax < 0.0f) return false;
+
+    tHit = (tmin >= 0.0f) ? tmin : tmax;
+    return true;
+}
+
+
+struct AABB { Vector3 min; Vector3 max; };
+
+static AABB ComputeMeshLocalAABB(Mesh* mesh)
+{
+    AABB b;
+    b.min = { 1e30f,  1e30f,  1e30f };
+    b.max = { -1e30f, -1e30f, -1e30f };
+
+    for (int i = 0; i < mesh->VertexCount; i++)
+    {
+        float x = mesh->Vertices[i].x;
+        float y = mesh->Vertices[i].y;
+        float z = mesh->Vertices[i].z;
+
+        if (x < b.min.x) b.min.x = x;
+        if (y < b.min.y) b.min.y = y;
+        if (z < b.min.z) b.min.z = z;
+
+        if (x > b.max.x) b.max.x = x;
+        if (y > b.max.y) b.max.y = y;
+        if (z > b.max.z) b.max.z = z;
+    }
+    return b;
+}
+
+static AABB ToWorldAABB(const AABB& local, const Vector3& pos)
+{
+    AABB w;
+    w.min = { local.min.x + pos.x, local.min.y + pos.y, local.min.z + pos.z };
+    w.max = { local.max.x + pos.x, local.max.y + pos.y, local.max.z + pos.z };
+    return w;
+}
+
 void HelloGL::InitGL(int argc, char* argv[])
 {
     GLUTCallbacks::Init(this);
@@ -35,6 +101,7 @@ void HelloGL::InitGL(int argc, char* argv[])
     glutDisplayFunc(GLUTCallbacks::Display);
     glutTimerFunc(REFRESHRATE, GLUTCallbacks::Timer, REFRESHRATE);
     glutKeyboardFunc(GLUTCallbacks::Keyboard);
+    glutMouseFunc(GLUTCallbacks::Mouse);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -95,7 +162,7 @@ void HelloGL::InitObjects()
 
 
     // Create only 20 Cubes for testing
-    for (int i = 0; i < 200; i++)
+    for (int i = 0; i < 160; i++)
     {
         float x = ((rand() % 400) / 10.0f) - 20.0f;
         float y = ((rand() % 200) / 10.0f) - 10.0f;
@@ -105,7 +172,7 @@ void HelloGL::InitObjects()
     }
 
     /* Create 20 Pyramids*/
-    for (int i = 0; i < 40; i++)
+    for (int i = 160; i < 200; i++)
     {
         float x = ((rand() % 400) / 10.0f) - 20.0f;
         float y = ((rand() % 200) / 10.0f) - 10.0f;
@@ -129,13 +196,25 @@ void HelloGL::Display()
         camera->center.x, camera->center.y, camera->center.z,
         camera->up.x, camera->up.y, camera->up.z);
 
-    glEnable(GL_TEXTURE_2D);     // Start with texture enabled
+    if (_hasRay)
+        UpdateRayFromMouse(_mouseX, _mouseY);
+
+    glEnable(GL_TEXTURE_2D);
 
     for (int i = 0; i < NUM_OBJ; i++)
-    {
-        if (objects[i])
-            objects[i]->Draw();
-    }
+        if (objects[i]) objects[i]->Draw();
+
+    // Optional: debug ray
+    // DrawRay();
+
+    // Text (your existing code)
+    Vector3 v = { -1.4f, 2.7f, -1.0f };
+    Color c = { 0.0f, 1.0f, 0.0f };
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+    DrawString("HelloGL", &v, &c);
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_LIGHTING);
 
     glutSwapBuffers();
 }
@@ -144,12 +223,25 @@ void HelloGL::Display()
 
 void HelloGL::Keyboard(unsigned char key, int x, int y)
 {
-    if (key == 'z')
-        rotation += 5.0f;
-    if (key == 'x')
-        rotation -= 5.0f;
+    // If an object is selected, move it with IJKL
+    if (selectedObject)
+    {
+        Vector3 p = selectedObject->GetPosition();
+        float s = 0.3f;
 
-    // Camera movement keys
+        if (key == 'i') p.y += s;
+        if (key == 'k') p.y -= s;
+        if (key == 'j') p.x -= s;
+        if (key == 'l') p.x += s;
+        if (key == 'u') p.z += s;
+        if (key == 'o') p.z -= s;
+
+        selectedObject->SetPosition(p);
+        glutPostRedisplay();
+        return;
+    }
+
+    // Otherwise camera movement (your original logic)
     if (key == 'w' || key == 'a' || key == 's' || key == 'd' || key == 'q' || key == 'e')
     {
         MoveCamera(key);
@@ -206,24 +298,127 @@ void HelloGL::MoveCamera(char key)
     }
 }
 
+
+void HelloGL::Mouse(int button, int state, int x, int y)
+{
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+    {
+        _mouseX = x;
+        _mouseY = y;
+        _hasRay = true;
+        _pickRequested = true;
+        glutPostRedisplay();
+    }
+}
+
+void HelloGL::UpdateRayFromMouse(int x, int y)
+{
+    GLdouble modelview[16], projection[16];
+    GLint viewport[4];
+    glGetDoublev(GL_MODELVIEW_MATRIX, modelview);
+    glGetDoublev(GL_PROJECTION_MATRIX, projection);
+    glGetIntegerv(GL_VIEWPORT, viewport);
+
+    GLdouble winX = (GLdouble)x;
+    GLdouble winY = (GLdouble)(viewport[3] - y);
+
+    GLdouble ox, oy, oz;
+
+    gluUnProject(winX, winY, 0.0, modelview, projection, viewport, &ox, &oy, &oz);
+    _rayStart = { (float)ox, (float)oy, (float)oz };
+
+    gluUnProject(winX, winY, 1.0, modelview, projection, viewport, &ox, &oy, &oz);
+    _rayEnd = { (float)ox, (float)oy, (float)oz };
+
+    _rayDir = { _rayEnd.x - _rayStart.x, _rayEnd.y - _rayStart.y, _rayEnd.z - _rayStart.z };
+    float len = sqrtf(_rayDir.x * _rayDir.x + _rayDir.y * _rayDir.y + _rayDir.z * _rayDir.z);
+    if (len > 1e-6f) { _rayDir.x /= len; _rayDir.y /= len; _rayDir.z /= len; }
+}
+
+void HelloGL::DrawRay()
+{
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+
+    glLineWidth(2.0f);
+    glColor3f(1, 1, 0);
+
+    glBegin(GL_LINES);
+    glVertex3f(_rayStart.x, _rayStart.y, _rayStart.z);
+    glVertex3f(_rayEnd.x, _rayEnd.y, _rayEnd.z);
+    glEnd();
+
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_LIGHTING);
+}
+
+
+
 void HelloGL::Update()
 {
+    // 1) Always update all objects (animation, rotation, etc.)
     for (int i = 0; i < NUM_OBJ; i++)
+        if (objects[i]) objects[i]->Update();
+
+    // 2) Picking only when click requested
+    if (_pickRequested && _hasRay)
     {
-        if (objects[i])
-            objects[i]->Update();
-     
+        selectedObject = nullptr;
+        selectedIndex = -1;
+        float bestT = 1e30f;
+
+        for (int i = 0; i < NUM_OBJ; i++)
+        {
+            if (!objects[i]) continue;
+
+            Mesh* mesh = objects[i]->GetMesh();
+            if (!mesh || !mesh->Vertices) continue; // mesh has Vertices/VertexCount 
+            // Compute mesh local bounds (simple version: compute every time)
+            // Later you can cache this per mesh pointer
+            AABB local = ComputeMeshLocalAABB(mesh);
+
+            Vector3 pos = objects[i]->GetPosition();
+            AABB world = ToWorldAABB(local, pos);
+
+            float tHit;
+            if (RayIntersectsAABB(_rayStart, _rayDir, world, tHit))
+            {
+                if (tHit < bestT)
+                {
+                    bestT = tHit;
+                    selectedObject = objects[i];
+                    selectedIndex = i;
+                }
+            }
+        }
+
+        if (selectedObject)
+            std::cout << "Object " << selectedIndex << " selected!\n";
+
+        _pickRequested = false;
     }
 
+    // 3) Light updates (your current code already does this)
     glLightfv(GL_LIGHT0, GL_AMBIENT, &(_lightData->Ambient.x));
     glLightfv(GL_LIGHT0, GL_DIFFUSE, &(_lightData->Diffuse.x));
     glLightfv(GL_LIGHT0, GL_SPECULAR, &(_lightData->Specular.x));
     glLightfv(GL_LIGHT0, GL_POSITION, &(_lightPosition->x));
 
     glutPostRedisplay();
-   
-	
-  
+
+
+}
+
+
+
+void HelloGL::DrawString(const char* text, Vector3* position, Color* color)
+{
+    glPushMatrix();
+    glColor3f(color->r, color->g, color->b);
+    glTranslatef(position->x, position->y, position->z);
+	glRasterPos2f(0.0f, 0.0f);
+    glutBitmapString(GLUT_BITMAP_TIMES_ROMAN_24, (unsigned char*)text);
+    glPopMatrix();
 }
 
 

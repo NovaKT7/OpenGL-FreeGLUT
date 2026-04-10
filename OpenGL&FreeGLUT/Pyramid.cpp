@@ -22,7 +22,7 @@ void Pyramid::Update()
 
 void Pyramid::Draw()
 {
-    SceneObject::Draw();
+    SceneObject::Draw(); // Call the base class Draw to set material properties
     // If the mesh failed to load, this line saves your program from crashing
     if (!_mesh || !_mesh->Vertices || !_mesh->Indices)
     {

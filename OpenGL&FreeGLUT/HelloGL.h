@@ -34,6 +34,13 @@ class HelloGL
 
 	void MoveCamera(char key);
 
+	//mouse function
+	void Mouse(int button, int state, int x, int y);
+
+	void UpdateRayFromMouse(int x, int y);
+
+	void DrawRay();
+
 	SceneObject* objects[NUM_OBJ];
 	
 
@@ -41,7 +48,19 @@ class HelloGL
 	void InitGL(int arc, char* argv[]);
 
 	void InitLighting();
+	void DrawString(const char* text, Vector3* position, Color* color);
 	
+	Vector3 _rayStart{};
+	Vector3 _rayEnd{};
+	bool _hasRay{};
+	int _mouseX = 0;
+	int _mouseY = 0;
+
+	bool _pickRequested = false;
+	Vector3 _rayDir{};
+	SceneObject* selectedObject = nullptr;
+	int selectedIndex = -1;
+
 
 private:
 	float rotation;

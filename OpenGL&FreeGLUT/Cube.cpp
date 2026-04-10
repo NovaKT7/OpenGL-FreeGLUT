@@ -39,7 +39,7 @@ void Cube::Update()
 }
 void Cube::Draw()
 {
-	SceneObject::Draw(); // Call the base class Draw to set material properties
+    SceneObject::Draw(); // Call the base class Draw to set material properties
     if (!_mesh || !_mesh->Vertices || !_mesh->Indices || _mesh->IndexCount <= 0) return;
 
     glPushMatrix();

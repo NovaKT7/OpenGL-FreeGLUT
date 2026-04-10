@@ -43,4 +43,11 @@ namespace GLUTCallbacks
 
 	
 	}
+
+	void Mouse(int button, int state, int x, int y)
+	{
+		// Handle mouse input if needed
+		helloGL->Mouse(button, state, x, y);
+
+	}
 }

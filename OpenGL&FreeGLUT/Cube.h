@@ -27,7 +27,8 @@ public:
 
 	void Draw();
 	void Update();
-	
+	Vector3 GetPosition() const override { return _position; }
+	void SetPosition(const Vector3& p) override { _position = p; }
 	
 };
 

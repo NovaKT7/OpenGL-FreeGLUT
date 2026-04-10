@@ -3,6 +3,7 @@
 #include <gl/gl.h>
 #include <gl/GLU.h>
 #include "Texture2D.h"
+#include <gl/GL.h>
 
 struct Vector3
 {

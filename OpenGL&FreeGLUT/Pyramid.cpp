@@ -1,8 +1,8 @@
 #include "Pyramid.h"
 #include <gl/GL.h>   
 
-Pyramid::Pyramid(Mesh* mesh, float x, float y, float z)
-    : SceneObject(mesh ,nullptr)
+Pyramid::Pyramid(Mesh* mesh, Texture2D *texture, float x, float y, float z)
+    : SceneObject(mesh, texture)
 {
     _position.x = x;
     _position.y = y;
@@ -22,6 +22,7 @@ void Pyramid::Update()
 
 void Pyramid::Draw()
 {
+    SceneObject::Draw();
     // If the mesh failed to load, this line saves your program from crashing
     if (!_mesh || !_mesh->Vertices || !_mesh->Indices)
     {
@@ -31,22 +32,33 @@ void Pyramid::Draw()
     glPushMatrix();
         glTranslatef(_position.x, _position.y, _position.z);
        
-
+        if (_texture)
+        {
+            glEnable(GL_TEXTURE_2D);
+            glBindTexture(GL_TEXTURE_2D, _texture->GetID());
+			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		}
+        else
+		{
+			glDisable(GL_TEXTURE_2D); 
+        }
         glBegin(GL_TRIANGLES);
         for (int i = 0; i < _mesh->IndexCount; i++)
         {
             GLushort idx = _mesh->Indices[i];
-            
-            //// Draw color if index is valid
-            //if (idx < _mesh->ColorCount)
-            //    glColor3f(_mesh->Colors[idx].r, _mesh->Colors[idx].g, _mesh->Colors[idx].b);
+            //Draw UV
+            if (_mesh->TexCoordCount > 0 && idx < _mesh->TexCoordCount)
+				glTexCoord2f(_mesh->TexCoords[idx].u, _mesh->TexCoords[idx].v);
+
+			//Draw Normal
+            if (_mesh->NormalCount > 0 && idx < _mesh->NormalCount)
+				glNormal3f(_mesh->Normals[idx].x, _mesh->Normals[idx].y, _mesh->Normals[idx].z);
+
 
             // Draw vertex
             if (idx < _mesh->VertexCount)
                 glVertex3f(_mesh->Vertices[idx].x, _mesh->Vertices[idx].y, _mesh->Vertices[idx].z);
         }
         glEnd();
-
-        glEnable(GL_TEXTURE_2D); 
     glPopMatrix();
 }

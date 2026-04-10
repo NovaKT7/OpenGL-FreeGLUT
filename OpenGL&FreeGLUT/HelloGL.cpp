@@ -18,6 +18,7 @@ HelloGL::HelloGL(int argc, char* argv[])
     srand(static_cast<unsigned int>(std::time(0)));
     InitGL(argc, argv);
     InitObjects();
+	InitLighting();
     GLUTCallbacks::Init(this);
     glutMainLoop();
 }
@@ -40,67 +41,77 @@ void HelloGL::InitGL(int argc, char* argv[])
     glViewport(0, 0, 800, 800);
     gluPerspective(45, 1, 1, 1000);
     glMatrixMode(GL_MODELVIEW);
+    
     glEnable(GL_DEPTH_TEST);
-
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
-    glEnableClientState(GL_NORMAL_ARRAY);
-
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
     glEnable(GL_CULL_FACE);
+   
     glCullFace(GL_BACK);
 }
 
+void HelloGL::InitLighting()
+{
+	_lightPosition = new Vector4{};
+	_lightPosition->x = 0.0f;
+	_lightPosition->y = 0.0f;
+	_lightPosition->z = 1.0f;
+	_lightPosition->w = 1.0f; // Positional light
 
+	_lightData = new Lighting{};
+	_lightData->Ambient.x = 0.2f;
+	_lightData->Ambient.y = 0.2f;
+	_lightData->Ambient.z = 0.2f;
+	_lightData->Ambient.w = 1.0f;
+	_lightData->Diffuse.x = 0.8f;
+	_lightData->Diffuse.y = 0.8f;
+	_lightData->Diffuse.z = 0.8f;
+	_lightData->Diffuse.w = 1.0f;
+	_lightData->Specular.x = 0.2f;
+	_lightData->Specular.y = 0.2f;
+	_lightData->Specular.z = 0.2f;
+	_lightData->Specular.w = 1.0f;
+}
 
 void HelloGL::InitObjects()
 {
-    
-   
-    
-   
-
-
     camera = new Camera();
     camera->eye = { 0.0f, 0.0f, 15.0f };
     camera->center = { 0.0f, 0.0f, 0.0f };
     camera->up = { 0.0f, 1.0f, 0.0f };
 
     Mesh* cubeMesh = MeshLoader::Load((char*)"cube2.txt");
- 
-
-    Texture2D* texture = new Texture2D();
-    texture->Load((char*)"Diamonds.raw", 960, 960);
     Mesh* pyramidMesh = MeshLoader::Load((char*)"pyramid.txt");
-    if (!pyramidMesh) {
-        std::cerr << "Failed to load pyramid.txt mesh!" << std::endl;
-    }
-    else {
-        std::cout << "Successfully loaded pyramid.txt mesh." << std::endl;
-    }
+
+    Texture2D* cubeTexture = new Texture2D();
+    cubeTexture->Load((char*)"Diamonds.raw", 960, 960);
+   
+	Texture2D* pyramidTexture = new Texture2D();
+	pyramidTexture->Load((char*)"Penguins.raw", 512, 512);
+ 
   
 
 
     // Create only 20 Cubes for testing
-    for (int i = 0; i < 20; i++)
+    for (int i = 0; i < 200; i++)
     {
         float x = ((rand() % 400) / 10.0f) - 20.0f;
         float y = ((rand() % 200) / 10.0f) - 10.0f;
         float z = -(20.0f + (rand() % 100) / 5.0f);
 
-        objects[i] = new Cube(cubeMesh, texture, x, y, z, 2.0f, 0.0f);
-
-
-     
+        objects[i] = new Cube(cubeMesh, cubeTexture, x, y, z, 2.0f, 0.0f);
     }
 
     /* Create 20 Pyramids*/
-    for (int i = 20; i < 40; i++)
+    for (int i = 0; i < 40; i++)
     {
         float x = ((rand() % 400) / 10.0f) - 20.0f;
         float y = ((rand() % 200) / 10.0f) - 10.0f;
         float z = -(20.0f + (rand() % 100) / 5.0f);
 
-        objects[i] = new Pyramid(pyramidMesh, x, y, z);
+        objects[i] = new Pyramid(pyramidMesh, pyramidTexture, x, y, z);
     }
 
     std::cout << "Test mode: 20 Cubes + 20 Pyramids created\n";
@@ -203,9 +214,16 @@ void HelloGL::Update()
             objects[i]->Update();
      
     }
-   
+
+    glLightfv(GL_LIGHT0, GL_AMBIENT, &(_lightData->Ambient.x));
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, &(_lightData->Diffuse.x));
+    glLightfv(GL_LIGHT0, GL_SPECULAR, &(_lightData->Specular.x));
+    glLightfv(GL_LIGHT0, GL_POSITION, &(_lightPosition->x));
+
     glutPostRedisplay();
    
+	
+  
 }
 
 

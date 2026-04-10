@@ -39,16 +39,23 @@ void Cube::Update()
 }
 void Cube::Draw()
 {
-    if (_mesh == nullptr || _mesh->Vertices == nullptr) return;
+	SceneObject::Draw(); // Call the base class Draw to set material properties
+    if (!_mesh || !_mesh->Vertices || !_mesh->Indices || _mesh->IndexCount <= 0) return;
 
     glPushMatrix();
     glTranslatef(_position.x, _position.y, _position.z);
     glRotatef(_rotation, 1.0f, 1.0f, 1.0f);
-
-    if (_texture != nullptr)
+	//texture binding
+	bool hasTexture = (_texture != nullptr);
+    if (hasTexture)
     {
         glBindTexture(GL_TEXTURE_2D, _texture->GetID());
         glEnable(GL_TEXTURE_2D);
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE); // Better lighting with textures
+    }
+    else
+    {
+		glDisable(GL_TEXTURE_2D); // Ensure texturing is disabled if no texture is present
     }
 
     // Enable the arrays

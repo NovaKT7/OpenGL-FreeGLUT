@@ -39,12 +39,16 @@ class HelloGL
 
 	void InitObjects();
 	void InitGL(int arc, char* argv[]);
+
+	void InitLighting();
 	
 
 private:
 	float rotation;
 	static Vertex vertices[];
 	static Color colors[];
+	Vector4* _lightPosition;
+	Lighting* _lightData;
 };
 
 

@@ -1,4 +1,6 @@
 ﻿#include "HelloGL.h"
+#include <cmath>
+#include <algorithm>
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
@@ -24,6 +26,38 @@ HelloGL::HelloGL(int argc, char* argv[])
     glutMainLoop();
 }
 
+
+static AABB ComputeMeshLocalAABB(Mesh* mesh)
+{
+    AABB b;
+    b.bmin = { 1e30f,  1e30f,  1e30f };
+    b.bmax = { -1e30f, -1e30f, -1e30f };
+
+    for (int i = 0; i < mesh->VertexCount; i++)
+    {
+        float x = mesh->Vertices[i].x;
+        float y = mesh->Vertices[i].y;
+        float z = mesh->Vertices[i].z;
+
+        if (x < b.bmin.x) b.bmin.x = x;
+        if (y < b.bmin.y) b.bmin.y = y;
+        if (z < b.bmin.z) b.bmin.z = z;
+
+        if (x > b.bmax.x) b.bmax.x = x;
+        if (y > b.bmax.y) b.bmax.y = y;
+        if (z > b.bmax.z) b.bmax.z = z;
+    }
+    return b;
+}
+
+static AABB ToWorldAABB(const AABB& local, const Vector3& pos)
+{
+    AABB w;
+    w.bmin = { local.bmin.x + pos.x, local.bmin.y + pos.y, local.bmin.z + pos.z };
+    w.bmax = { local.bmax.x + pos.x, local.bmax.y + pos.y, local.bmax.z + pos.z };
+    return w;
+}
+
 static bool RayIntersectsAABB(const Vector3& ro, const Vector3& rd, const AABB& box, float& tHit)
 {
     float tmin = -1e30f;
@@ -31,12 +65,13 @@ static bool RayIntersectsAABB(const Vector3& ro, const Vector3& rd, const AABB& 
 
     auto slab = [&](float roC, float rdC, float minC, float maxC) -> bool
         {
-            if (fabs(rdC) < 1e-8f)
+            if (fabsf(rdC) < 1e-8f)
                 return (roC >= minC && roC <= maxC);
 
             float invD = 1.0f / rdC;
             float t1 = (minC - roC) * invD;
             float t2 = (maxC - roC) * invD;
+
             if (t1 > t2) std::swap(t1, t2);
 
             if (t1 > tmin) tmin = t1;
@@ -45,9 +80,9 @@ static bool RayIntersectsAABB(const Vector3& ro, const Vector3& rd, const AABB& 
             return (tmin <= tmax);
         };
 
-    if (!slab(ro.x, rd.x, box.min.x, box.max.x)) return false;
-    if (!slab(ro.y, rd.y, box.min.y, box.max.y)) return false;
-    if (!slab(ro.z, rd.z, box.min.z, box.max.z)) return false;
+    if (!slab(ro.x, rd.x, box.bmin.x, box.bmax.x)) return false;
+    if (!slab(ro.y, rd.y, box.bmin.y, box.bmax.y)) return false;
+    if (!slab(ro.z, rd.z, box.bmin.z, box.bmax.z)) return false;
 
     if (tmax < 0.0f) return false;
 
@@ -55,46 +90,20 @@ static bool RayIntersectsAABB(const Vector3& ro, const Vector3& rd, const AABB& 
     return true;
 }
 
-
-struct AABB { Vector3 min; Vector3 max; };
-
-static AABB ComputeMeshLocalAABB(Mesh* mesh)
+static bool AABBIntersectsAABB(const AABB& a, const AABB& b)
 {
-    AABB b;
-    b.min = { 1e30f,  1e30f,  1e30f };
-    b.max = { -1e30f, -1e30f, -1e30f };
-
-    for (int i = 0; i < mesh->VertexCount; i++)
-    {
-        float x = mesh->Vertices[i].x;
-        float y = mesh->Vertices[i].y;
-        float z = mesh->Vertices[i].z;
-
-        if (x < b.min.x) b.min.x = x;
-        if (y < b.min.y) b.min.y = y;
-        if (z < b.min.z) b.min.z = z;
-
-        if (x > b.max.x) b.max.x = x;
-        if (y > b.max.y) b.max.y = y;
-        if (z > b.max.z) b.max.z = z;
-    }
-    return b;
+    return (a.bmin.x <= b.bmax.x && a.bmax.x >= b.bmin.x) &&
+        (a.bmin.y <= b.bmax.y && a.bmax.y >= b.bmin.y) &&
+        (a.bmin.z <= b.bmax.z && a.bmax.z >= b.bmin.z);
 }
 
-static AABB ToWorldAABB(const AABB& local, const Vector3& pos)
-{
-    AABB w;
-    w.min = { local.min.x + pos.x, local.min.y + pos.y, local.min.z + pos.z };
-    w.max = { local.max.x + pos.x, local.max.y + pos.y, local.max.z + pos.z };
-    return w;
-}
 
 void HelloGL::InitGL(int argc, char* argv[])
 {
     GLUTCallbacks::Init(this);
 
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE);
+    glutInitDisplayMode(GLUT_DOUBLE| GLUT_RGBA| GLUT_DEPTH);
     glutInitWindowSize(800, 800);
     glutInitWindowPosition(100, 100);
     glutCreateWindow("Simple OpenGL Program");
@@ -196,6 +205,7 @@ void HelloGL::Display()
         camera->center.x, camera->center.y, camera->center.z,
         camera->up.x, camera->up.y, camera->up.z);
 
+    // Compute ray only if we have clicked at least once
     if (_hasRay)
         UpdateRayFromMouse(_mouseX, _mouseY);
 
@@ -204,12 +214,14 @@ void HelloGL::Display()
     for (int i = 0; i < NUM_OBJ; i++)
         if (objects[i]) objects[i]->Draw();
 
-    // Optional: debug ray
-    // DrawRay();
+    // Debug: draw ray line (optional)
+    if (_hasRay)
+        DrawRay();
 
-    // Text (your existing code)
+    // Text
     Vector3 v = { -1.4f, 2.7f, -1.0f };
     Color c = { 0.0f, 1.0f, 0.0f };
+
     glDisable(GL_LIGHTING);
     glDisable(GL_TEXTURE_2D);
     DrawString("HelloGL", &v, &c);
@@ -223,7 +235,7 @@ void HelloGL::Display()
 
 void HelloGL::Keyboard(unsigned char key, int x, int y)
 {
-    // If an object is selected, move it with IJKL
+    // Move selected object
     if (selectedObject)
     {
         Vector3 p = selectedObject->GetPosition();
@@ -241,14 +253,13 @@ void HelloGL::Keyboard(unsigned char key, int x, int y)
         return;
     }
 
-    // Otherwise camera movement (your original logic)
+    // camera movement (your original)
     if (key == 'w' || key == 'a' || key == 's' || key == 'd' || key == 'q' || key == 'e')
     {
         MoveCamera(key);
         glutPostRedisplay();
     }
 }
-
 void HelloGL::MoveCamera(char key)
 {
     float moveSpeed = 0.1f;
@@ -299,6 +310,7 @@ void HelloGL::MoveCamera(char key)
 }
 
 
+
 void HelloGL::Mouse(int button, int state, int x, int y)
 {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
@@ -307,14 +319,15 @@ void HelloGL::Mouse(int button, int state, int x, int y)
         _mouseY = y;
         _hasRay = true;
         _pickRequested = true;
-        glutPostRedisplay();
     }
 }
+
 
 void HelloGL::UpdateRayFromMouse(int x, int y)
 {
     GLdouble modelview[16], projection[16];
     GLint viewport[4];
+
     glGetDoublev(GL_MODELVIEW_MATRIX, modelview);
     glGetDoublev(GL_PROJECTION_MATRIX, projection);
     glGetIntegerv(GL_VIEWPORT, viewport);
@@ -324,12 +337,15 @@ void HelloGL::UpdateRayFromMouse(int x, int y)
 
     GLdouble ox, oy, oz;
 
+    // near
     gluUnProject(winX, winY, 0.0, modelview, projection, viewport, &ox, &oy, &oz);
     _rayStart = { (float)ox, (float)oy, (float)oz };
 
+    // far
     gluUnProject(winX, winY, 1.0, modelview, projection, viewport, &ox, &oy, &oz);
     _rayEnd = { (float)ox, (float)oy, (float)oz };
 
+    // dir = normalized
     _rayDir = { _rayEnd.x - _rayStart.x, _rayEnd.y - _rayStart.y, _rayEnd.z - _rayStart.z };
     float len = sqrtf(_rayDir.x * _rayDir.x + _rayDir.y * _rayDir.y + _rayDir.z * _rayDir.z);
     if (len > 1e-6f) { _rayDir.x /= len; _rayDir.y /= len; _rayDir.z /= len; }
@@ -354,29 +370,40 @@ void HelloGL::DrawRay()
 
 
 
+
 void HelloGL::Update()
 {
-    // 1) Always update all objects (animation, rotation, etc.)
+    // 1) Always update objects (rotation / animation)
     for (int i = 0; i < NUM_OBJ; i++)
-        if (objects[i]) objects[i]->Update();
+    {
+        if (objects[i])
+            objects[i]->Update();
+    }
 
-    // 2) Picking only when click requested
+    // 2) If user clicked, do picking ONCE
     if (_pickRequested && _hasRay)
     {
+        // Clear old selection + touching
+        for (int i = 0; i < NUM_OBJ; i++)
+        {
+            if (!objects[i]) continue;
+            objects[i]->SetSelected(false);
+            objects[i]->SetTouching(false);
+        }
+
         selectedObject = nullptr;
         selectedIndex = -1;
         float bestT = 1e30f;
 
+        // Find closest object hit by ray
         for (int i = 0; i < NUM_OBJ; i++)
         {
             if (!objects[i]) continue;
 
             Mesh* mesh = objects[i]->GetMesh();
-            if (!mesh || !mesh->Vertices) continue; // mesh has Vertices/VertexCount 
-            // Compute mesh local bounds (simple version: compute every time)
-            // Later you can cache this per mesh pointer
-            AABB local = ComputeMeshLocalAABB(mesh);
+            if (!mesh || !mesh->Vertices) continue;
 
+            AABB local = ComputeMeshLocalAABB(mesh);
             Vector3 pos = objects[i]->GetPosition();
             AABB world = ToWorldAABB(local, pos);
 
@@ -392,22 +419,72 @@ void HelloGL::Update()
             }
         }
 
+        // Mark selected
         if (selectedObject)
+        {
+            selectedObject->SetSelected(true);
             std::cout << "Object " << selectedIndex << " selected!\n";
+        }
 
-        _pickRequested = false;
+        _pickRequested = false; // important
     }
 
-    // 3) Light updates (your current code already does this)
+    // 3) LIVE touching highlight: run EVERY frame
+    // This makes touching glow update while you move the selected object.
+    if (selectedObject)
+    {
+        // Clear touching for all objects (do NOT clear selected)
+        for (int i = 0; i < NUM_OBJ; i++)
+        {
+            if (!objects[i]) continue;
+            objects[i]->SetTouching(false);
+        }
+
+        // Compute selected world AABB
+        Mesh* selMesh = selectedObject->GetMesh();
+        if (selMesh && selMesh->Vertices)
+        {
+            AABB selLocal = ComputeMeshLocalAABB(selMesh);
+            AABB selWorld = ToWorldAABB(selLocal, selectedObject->GetPosition());
+
+            // Check all objects against selected
+            for (int i = 0; i < NUM_OBJ; i++)
+            {
+                if (!objects[i]) continue;
+                if (objects[i] == selectedObject) continue;
+
+                Mesh* m = objects[i]->GetMesh();
+                if (!m || !m->Vertices) continue;
+
+                AABB local = ComputeMeshLocalAABB(m);
+                AABB world = ToWorldAABB(local, objects[i]->GetPosition());
+
+                if (AABBIntersectsAABB(selWorld, world))
+                {
+                    objects[i]->SetTouching(true);
+                }
+            }
+        }
+    }
+    else
+    {
+        // No selected object: nobody should be "touching"
+        for (int i = 0; i < NUM_OBJ; i++)
+        {
+            if (!objects[i]) continue;
+            objects[i]->SetTouching(false);
+        }
+    }
+
+    // 4) Light updates
     glLightfv(GL_LIGHT0, GL_AMBIENT, &(_lightData->Ambient.x));
     glLightfv(GL_LIGHT0, GL_DIFFUSE, &(_lightData->Diffuse.x));
     glLightfv(GL_LIGHT0, GL_SPECULAR, &(_lightData->Specular.x));
     glLightfv(GL_LIGHT0, GL_POSITION, &(_lightPosition->x));
 
     glutPostRedisplay();
-
-
 }
+
 
 
 

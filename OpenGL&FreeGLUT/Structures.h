@@ -1,4 +1,5 @@
 #pragma once
+#define NOMINMAX
 #include <Windows.h>
 #include <gl/gl.h>
 #include <gl/GLU.h>
@@ -76,6 +77,6 @@ struct Ray
 
 struct AABB
     {
-	Vector3 Min;
-	Vector3 Max;
+	Vector3 bmin;
+	Vector3 bmax;
 };

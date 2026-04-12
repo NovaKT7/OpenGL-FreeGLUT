@@ -52,12 +52,16 @@ class HelloGL
 	
 	Vector3 _rayStart{};
 	Vector3 _rayEnd{};
+	Vector3 _rayDir{};
+
 	bool _hasRay{};
+	bool _pickRequested = false;
+
 	int _mouseX = 0;
 	int _mouseY = 0;
 
-	bool _pickRequested = false;
-	Vector3 _rayDir{};
+	
+	
 	SceneObject* selectedObject = nullptr;
 	int selectedIndex = -1;
 

@@ -117,7 +117,7 @@ void HelloGL::InitGL(int argc, char* argv[])
     glViewport(0, 0, 800, 800);
     gluPerspective(45, 1, 1, 1000);
     glMatrixMode(GL_MODELVIEW);
-    
+    glutPassiveMotionFunc(GLUTCallbacks::PassiveMotion);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
@@ -153,20 +153,31 @@ void HelloGL::InitLighting()
 
 void HelloGL::InitObjects()
 {
-    camera = new Camera();
-    camera->eye = { 0.0f, 0.0f, 15.0f };
-    camera->center = { 0.0f, 0.0f, 0.0f };
-    camera->up = { 0.0f, 1.0f, 0.0f };
+
+    camera = new CameraController();
+    camera->SetPosition({ 0.0f, 0.0f, 15.0f });
+    camera->SetLookAt({ 0.0f, 0.0f, 0.0f });
+    camera->SetMoveSpeed(0.3f);
+    camera->SetMouseSensitivity(0.15f);
+
+    // Load 3 textures into a pool
+    _textures[0] = new Texture2D();
+    _textures[0]->Load("Diamonds.raw", 960, 960);
+
+    _textures[1] = new Texture2D();
+    _textures[1]->Load("Penguins.raw", 512, 512);
+
+    _textures[2] = new Texture2D();
+    _textures[2]->Load("stars.raw", 512, 512); 
+
+    // Choose default texture for new objects
+    Texture2D* cubeTexture = _textures[0];
+    Texture2D* pyramidTexture = _textures[1];
+
 
     Mesh* cubeMesh = MeshLoader::Load((char*)"cube2.txt");
     Mesh* pyramidMesh = MeshLoader::Load((char*)"pyramid.txt");
 
-    Texture2D* cubeTexture = new Texture2D();
-    cubeTexture->Load((char*)"Diamonds.raw", 960, 960);
-   
-	Texture2D* pyramidTexture = new Texture2D();
-	pyramidTexture->Load((char*)"Penguins.raw", 512, 512);
- 
   
 
 
@@ -201,9 +212,10 @@ void HelloGL::Display()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
 
-    gluLookAt(camera->eye.x, camera->eye.y, camera->eye.z,
-        camera->center.x, camera->center.y, camera->center.z,
-        camera->up.x, camera->up.y, camera->up.z);
+
+    camera->UpdateFollow();   // if follow enabled, updates camera eye/center
+    camera->ApplyView();      // calls gluLookAt internally
+
 
     // Compute ray only if we have clicked at least once
     if (_hasRay)
@@ -224,22 +236,180 @@ void HelloGL::Display()
 
     glDisable(GL_LIGHTING);
     glDisable(GL_TEXTURE_2D);
-    DrawString("HelloGL", &v, &c);
+    DrawString("Minecraft is Awsome", &v, &c);
+    DrawHUD();
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_LIGHTING);
 
     glutSwapBuffers();
 }
+void HelloGL::DrawHUD()
+
+{
+    int w = glutGet(GLUT_WINDOW_WIDTH);
+    int h = glutGet(GLUT_WINDOW_HEIGHT);
+
+	// Swithch 2D orthographic projection for HUD
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, w, 0, h);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+
+    glColor3f(0.0f, 1.0f, 0.0f); // green
 
 
+    // Line spacing
+    int x = 10;
+    int y = h - 20;
+    int dy = 25;
+
+    char line[128];
+
+    // 1) FPS
+    sprintf_s(line, "FPS: %.1f", _fps );
+    glRasterPos2i(x, y);
+    glutBitmapString(GLUT_BITMAP_TIMES_ROMAN_24, (unsigned char*)line);
+    y -= dy;
+
+    // 2) Object count
+    sprintf_s(line, "Objects: %d", NUM_OBJ);
+    glRasterPos2i(x, y);
+    glutBitmapString(GLUT_BITMAP_TIMES_ROMAN_24, (unsigned char*)line);
+    y -= dy;
+
+    // 3) Selected object
+    if (selectedObject)
+        sprintf_s(line, "Selected: %d", selectedIndex);
+    else
+        sprintf_s(line, "Selected: None");
+
+    glRasterPos2i(x, y);
+    glutBitmapString(GLUT_BITMAP_TIMES_ROMAN_24, (unsigned char*)line);
+    y -= dy;
+
+    // 4) Touching count (count objects marked touching)
+    int touchingCount = 0;
+    for (int i = 0; i < NUM_OBJ; i++)
+        if (objects[i] && objects[i]->_IsTouching())
+            touchingCount++;
+
+    sprintf_s(line, "Touching: %d", touchingCount);
+    glRasterPos2i(x, y);
+    glutBitmapString(GLUT_BITMAP_TIMES_ROMAN_24, (unsigned char*)line);
+    y -= dy;
+
+    // 5) Camera position
+    const Camera&cam = camera->GetData();
+    sprintf_s(line, "Camera: (%.1f, %.1f, %.1f)",
+        cam.eye.x, cam.eye.y, cam.eye.z);
+    glRasterPos2i(x, y);
+    glutBitmapString(GLUT_BITMAP_TIMES_ROMAN_24, (unsigned char*)line);
+
+
+    if (selectedObject)
+    {
+        Vector3 r = selectedObject->GetRotation();
+        sprintf_s(line, "Rot XYZ: (%.0f, %.0f, %.0f)", r.x, r.y, r.z);
+    }
+    else
+    {
+        sprintf_s(line, "Rot XYZ: (N/A)");
+    }
+
+
+    // --- Restore states ---
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_LIGHTING);
+
+    glPopMatrix();               // modelview
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();               // projection
+    glMatrixMode(GL_MODELVIEW);
+}
+
+
+void HelloGL::DrawFPS(const char* text, Vector3* position, Color* color)
+{
+   glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+    glLoadIdentity();   
+    gluOrtho2D(0, 800, 0, 800); // Set orthographic projection to match window size
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();   
+    glDisable(GL_LIGHTING);
+    // create array to store text and convert frames Per second to string
+    char fpsText[50];
+    sprintf_s(fpsText, "FPS: %.2f", _fps);
+
+    //Set 2D pixel locaation for text and color
+    Vector3 textpos = {10.0f, 780.0f, 0.0f};
+    Color textcolor = {0.0f, 1.0f, 0.0f};
+    DrawString(fpsText, &textpos, &textcolor);
+    glEnable(GL_LIGHTING);
+
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+}
 
 void HelloGL::Keyboard(unsigned char key, int x, int y)
 {
-    // Move selected object
+    // Selecting Objeccting
     if (selectedObject)
     {
+        // Follow controls (works even if selectedObject exists)
+        if (key == 'V')
+        {
+            if (selectedObject)
+            {
+                // Follow the selected object's position
+                _followTargetPosCache = selectedObject->GetPosition();
+                camera->SetFollowTarget(&_followTargetPosCache);
+                camera->EnableFollow(true);
+            }
+            return;
+        }
+
+        if (key == 'B')
+        {
+            camera->EnableFollow(false);
+            camera->SetFollowTarget(nullptr);
+            return;
+        }
+
         Vector3 p = selectedObject->GetPosition();
         float s = 0.3f;
+        // Texture Switching
+        if (key == 't')
+        {
+            _currentTextureIndex = (_currentTextureIndex + 1) % 3;
+            selectedObject->SetTexture(_textures[_currentTextureIndex]);
+            glutPostRedisplay();
+            return;
+        }
+        // ading rotation
+
+        Vector3 r = selectedObject->GetRotation();
+        float rotSpeed = 3.0f;
+
+        if (key == 'g') r.x += rotSpeed;
+        if (key == 'f') r.x -= rotSpeed;
+
+        if (key == 'r') r.y += rotSpeed;
+        if (key == 'v') r.y -= rotSpeed;
+
+        if (key == 'b') r.z += rotSpeed;
+        if (key == 'c') r.z -= rotSpeed;
+
+        selectedObject->SetRotation(r);
+
 
         if (key == 'i') p.y += s;
         if (key == 'k') p.y -= s;
@@ -262,57 +432,48 @@ void HelloGL::Keyboard(unsigned char key, int x, int y)
 }
 void HelloGL::MoveCamera(char key)
 {
-    float moveSpeed = 0.1f;
+
+    float s = 0.3f;
+
     switch (key)
     {
-    case 'w':
-        camera->eye.z -= moveSpeed;
-        camera->center.z-= moveSpeed; // Move the center point along with the camera
-        
-        
-        break;
-    case 's':
-        camera->eye.z += moveSpeed;
-        camera->center.z += moveSpeed; // Move the center point along with the camera
-        break;
-    case 'a':
-        camera->eye.x -= moveSpeed;
-        camera->center.x -= moveSpeed; // Move the center point along with the camera
-        break;
-    case 'd':
-        camera->eye.x += moveSpeed;
-        camera->center.x += moveSpeed; // Move the center point along with the camera
-        break;
-    case 'q':
-        camera->eye.y += moveSpeed;
-        camera->center.y += moveSpeed; // Move the center point along with the camera
-        break;
-    case 'e':
-        camera->eye.y -= moveSpeed;
-        camera->center.y -= moveSpeed; // Move the center point along with the camera
-        break;
-        case 'z':
-            camera->eye.x += moveSpeed;
-            camera->eye.z += moveSpeed;
-            camera->center.z -= moveSpeed;// Move the center point along with the camera
-            camera->center.x -= moveSpeed; // Move the center point along with the camera
-
-			break;
-            case 'x':
-                camera->eye.x -= moveSpeed;
-                camera->eye.z -= moveSpeed;
-                camera->center.z += moveSpeed;// Move the center point along with the camera
-                camera->center.x += moveSpeed;
-                break;
-    default:
-        break;
+    case 'w': camera->MoveForward(-s); break;
+    case 's': camera->MoveForward(s); break;
+    case 'a': camera->StrafeRight(-s); break;
+    case 'd': camera->StrafeRight(s); break;
+    case 'q': camera->MoveUp(s); break;
+    case 'e': camera->MoveUp(-s); break;
+    default: break;
     }
+
 }
+
+
+void HelloGL::PassiveMotion(int x, int y)
+{
+    if (!_mouseLookEnabled)
+    {
+        _lastMouseX = x;
+        _lastMouseY = y;
+        return;
+    }
+
+    int dx = x - _lastMouseX;
+    int dy = y - _lastMouseY;
+
+    _lastMouseX = x;
+    _lastMouseY = y;
+
+    camera->ProcessMouseDelta(dx, dy); 
+    glutPostRedisplay();
+}
+
 
 
 
 void HelloGL::Mouse(int button, int state, int x, int y)
 {
+    // Left click for picking
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
     {
         _mouseX = x;
@@ -320,6 +481,23 @@ void HelloGL::Mouse(int button, int state, int x, int y)
         _hasRay = true;
         _pickRequested = true;
     }
+
+    //right click for camera look toggle
+
+    if (button == GLUT_RIGHT_BUTTON)
+    {
+        if (state == GLUT_DOWN)
+        {
+            _mouseLookEnabled = true;
+            _lastMouseX = x;
+            _lastMouseY = y;
+        }
+        else if (state == GLUT_UP)
+        {
+            _mouseLookEnabled = false;
+        }
+    }
+
 }
 
 
@@ -373,14 +551,27 @@ void HelloGL::DrawRay()
 
 void HelloGL::Update()
 {
-    // 1) Always update objects (rotation / animation)
+  
+    static int frameCount = 0;
+    static int lastTime = 0;
+
+    int currentTime = glutGet(GLUT_ELAPSED_TIME);
+    frameCount++;
+
+    if ( currentTime - lastTime >= 1000 )
+	{
+        _fps = frameCount / ((currentTime - lastTime) / 1000.0f);
+        lastTime = currentTime;
+        frameCount = 0;
+	}
+    //  Always update objects (rotation / animation)
     for (int i = 0; i < NUM_OBJ; i++)
     {
         if (objects[i])
             objects[i]->Update();
     }
 
-    // 2) If user clicked, do picking ONCE
+    // If user clicked, do picking ONCE
     if (_pickRequested && _hasRay)
     {
         // Clear old selection + touching
@@ -429,7 +620,7 @@ void HelloGL::Update()
         _pickRequested = false; // important
     }
 
-    // 3) LIVE touching highlight: run EVERY frame
+    //  LIVE touching highlight: run EVERY frame
     // This makes touching glow update while you move the selected object.
     if (selectedObject)
     {
@@ -476,7 +667,13 @@ void HelloGL::Update()
         }
     }
 
-    // 4) Light updates
+    if (camera->IsFollowEnabled() && selectedObject)
+    {
+        _followTargetPosCache = selectedObject->GetPosition();
+    }
+
+
+    //  Light updates
     glLightfv(GL_LIGHT0, GL_AMBIENT, &(_lightData->Ambient.x));
     glLightfv(GL_LIGHT0, GL_DIFFUSE, &(_lightData->Diffuse.x));
     glLightfv(GL_LIGHT0, GL_SPECULAR, &(_lightData->Specular.x));

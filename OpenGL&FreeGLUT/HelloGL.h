@@ -8,6 +8,7 @@
 #include "Cube.h"
 #include "OBJLoader.h"
 #include "Pyramid.h"
+#include "CameraController.h"
 #define REFRESHRATE 16 //approx 60 FPS
 #define NUM_OBJ 200 // number of cubes
 
@@ -15,7 +16,7 @@
 
 class HelloGL
 {
-	Camera* camera;
+	CameraController* camera;
 
 	public:
 		
@@ -50,6 +51,15 @@ class HelloGL
 	void InitLighting();
 	void DrawString(const char* text, Vector3* position, Color* color);
 	
+	//FPS Drawing
+	void DrawFPS(const char* text, Vector3* position, Color* color);
+	float _fps = 0.0f;
+
+	//Draw Hud
+	void DrawHUD();
+
+	void PassiveMotion(int x, int y);
+
 	Vector3 _rayStart{};
 	Vector3 _rayEnd{};
 	Vector3 _rayDir{};
@@ -59,6 +69,11 @@ class HelloGL
 
 	int _mouseX = 0;
 	int _mouseY = 0;
+
+	//Texture switching
+
+	Texture2D* _textures[3] = { nullptr, nullptr, nullptr };
+	int _currentTextureIndex = 0;
 
 	
 	
@@ -72,6 +87,15 @@ private:
 	static Color colors[];
 	Vector4* _lightPosition;
 	Lighting* _lightData;
+
+	// mouse look
+	bool _mouseLookEnabled = false;
+	int _lastMouseX = 0;
+	int _lastMouseY = 0;
+
+	// follow target storage
+	Vector3 _followTargetPosCache{}; // used when following selected object
+
 };
 
 

@@ -11,7 +11,7 @@ Cube::Cube(Mesh* mesh, Texture2D* texture, float x, float y, float z, float rota
     _rotationSpeed = rand() % 2 + 1;
     _movementSpeed = movementSpeed;
 	_texture = texture;
-
+    _rotationManual = { 0.0f, 0.0f, 0.0f };
 
 
 }
@@ -31,6 +31,9 @@ int Cube::numindicies = 0;
 
 void Cube::Update()
 {
+    if (IsSelected())
+        return; // Don't update if selected
+ 
     _rotation += _rotationSpeed;               
     if (_rotation >= 360.0f)
         _rotation -= 360.0f;
@@ -44,6 +47,13 @@ void Cube::Draw()
 
     glPushMatrix();
     glTranslatef(_position.x, _position.y, _position.z);
+
+    //Manual Rotation
+    glRotatef(_rotationManual.x, 1.0f, 0.0f, 0.0f);
+    glRotatef(_rotationManual.y, 0.0f, 1.0f, 0.0f);
+    glRotatef(_rotationManual.z, 0.0f, 0.0f, 1.0f);
+
+
     glRotatef(_rotation, 1.0f, 1.0f, 1.0f);
 	//texture binding
 	bool hasTexture = (_texture != nullptr);

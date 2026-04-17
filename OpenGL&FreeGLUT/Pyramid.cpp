@@ -12,6 +12,7 @@ Pyramid::Pyramid(Mesh* mesh, Texture2D *texture, float x, float y, float z)
 Pyramid::~Pyramid()
 {
     // nothing special — mesh is shared
+
 }
 
 void Pyramid::Update()
@@ -29,6 +30,8 @@ void Pyramid::Draw()
         return; 
     }
 
+
+
     glPushMatrix();
         glTranslatef(_position.x, _position.y, _position.z);
        
@@ -42,6 +45,9 @@ void Pyramid::Draw()
 		{
 			glDisable(GL_TEXTURE_2D); 
         }
+
+        glDisable(GL_CULL_FACE);
+
         glBegin(GL_TRIANGLES);
         for (int i = 0; i < _mesh->IndexCount; i++)
         {
@@ -60,5 +66,6 @@ void Pyramid::Draw()
                 glVertex3f(_mesh->Vertices[idx].x, _mesh->Vertices[idx].y, _mesh->Vertices[idx].z);
         }
         glEnd();
+        glEnable(GL_CULL_FACE); // Re-enable face culling for other objects
     glPopMatrix();
 }

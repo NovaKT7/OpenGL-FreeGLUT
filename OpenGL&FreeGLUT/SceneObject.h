@@ -7,6 +7,7 @@ protected:
 	Mesh* _mesh;
 	Texture2D* _texture;
 	Material* _material;
+	Vector3 _rotationManual; // rotate in degrees around x, y, z axes
 
 	bool _selected = false; 
 	bool _touching = false;
@@ -18,6 +19,13 @@ public:
 	Mesh* GetMesh() const { return _mesh; } //needed for picking and moving objects
 	virtual Vector3 GetPosition() const = 0;
 	virtual void SetPosition(const Vector3& p) = 0;
+	Vector3 GetRotation() const { return _rotationManual; }
+	void SetRotation(const Vector3& r) { _rotationManual = r; }
+
+	//Ading Texture
+	Texture2D* GetTexture() const { return _texture; }
+	void SetTexture(Texture2D* tex) { _texture = tex; }
+
 
 	void SetSelected(bool s) { _selected = s; }
 	void SetTouching(bool t) { _touching = t; }

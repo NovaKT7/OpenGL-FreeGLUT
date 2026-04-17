@@ -59,6 +59,7 @@ class HelloGL
 	void DrawHUD();
 
 	void PassiveMotion(int x, int y);
+	void Motion(int x, int y);
 
 	Vector3 _rayStart{};
 	Vector3 _rayEnd{};

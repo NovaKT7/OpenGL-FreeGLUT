@@ -58,4 +58,10 @@ namespace GLUTCallbacks
 			helloGL->PassiveMotion(x, y);
 	}
 
+	void Motion(int x, int y)
+	{
+		if (helloGL != nullptr)
+			helloGL->Motion(x, y);
+	}
+
 }

@@ -1,0 +1,33 @@
+Please make sure Caps-lock is not on while testing my project
+
+===Camera Movement (keyboard)===
+w - move forward
+s- move backward
+a - move left
+d - move right
+
+==Move Camera (Mouse)==
+Hold Right Mouse - Move Camera
+
+===Translate Selected Object===
+i - move selected object up
+k - move selected object down
+j - move selected object left
+l - move selected object right
+u - move selected object forward
+o - move selected object backward 
+
+===Rotate Selected Object===
+g - Rotate around X positive
+f - Rotate around X negative
+r - Rotate around Y positive
+v - Rotate around Y negative
+n - Rotate around Z positive
+c - Rotate around Z negative
+
+==Lock On Selected Object==
+shift + v - Lock Selected
+shift + b - Unlock Selected
+
+
+

@@ -117,7 +117,10 @@ void HelloGL::InitGL(int argc, char* argv[])
     glViewport(0, 0, 800, 800);
     gluPerspective(45, 1, 1, 1000);
     glMatrixMode(GL_MODELVIEW);
+
     glutPassiveMotionFunc(GLUTCallbacks::PassiveMotion);
+    glutMotionFunc(GLUTCallbacks::Motion);
+
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
@@ -205,6 +208,13 @@ void HelloGL::InitObjects()
 }
 
 
+void HelloGL::Motion(int x, int y)
+{
+    // When a button is held down, GLUT calls Motion, not PassiveMotion.
+    // Reuse the same behavior.
+    PassiveMotion(x, y);
+}
+
 
   
 void HelloGL::Display()
@@ -236,7 +246,7 @@ void HelloGL::Display()
 
     glDisable(GL_LIGHTING);
     glDisable(GL_TEXTURE_2D);
-    DrawString("Minecraft is Awsome", &v, &c);
+    DrawString("Is a high mark too much to ask?", &v, &c);
     DrawHUD();
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_LIGHTING);
@@ -401,7 +411,7 @@ void HelloGL::Keyboard(unsigned char key, int x, int y)
 
         if (key == 'g') r.x += rotSpeed;
         if (key == 'f') r.x -= rotSpeed;
-
+      
         if (key == 'r') r.y += rotSpeed;
         if (key == 'v') r.y -= rotSpeed;
 
@@ -424,7 +434,7 @@ void HelloGL::Keyboard(unsigned char key, int x, int y)
     }
 
     // camera movement (your original)
-    if (key == 'w' || key == 'a' || key == 's' || key == 'd' || key == 'q' || key == 'e')
+    if (key == 's' || key == 'a' || key == 'w' || key == 'd' || key == 'q' || key == 'e')
     {
         MoveCamera(key);
         glutPostRedisplay();
@@ -437,8 +447,8 @@ void HelloGL::MoveCamera(char key)
 
     switch (key)
     {
-    case 'w': camera->MoveForward(-s); break;
-    case 's': camera->MoveForward(s); break;
+    case 's': camera->MoveForward(-s); break;
+    case 'w': camera->MoveForward(s); break;
     case 'a': camera->StrafeRight(-s); break;
     case 'd': camera->StrafeRight(s); break;
     case 'q': camera->MoveUp(s); break;
